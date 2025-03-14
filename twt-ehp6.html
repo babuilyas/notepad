@@ -3,34 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Online Notepad</title>
+    <title>Online Notepad with GitHub Gist</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        textarea { width: 100%; height: 80vh; padding: 10px; font-size: 16px; }
+        textarea { width: 100%; height: 60vh; padding: 10px; font-size: 16px; }
+        button { margin-top: 10px; padding: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <h2>Online Notepad</h2>
-    <textarea id="notepad" placeholder="Start typing..."></textarea>
+    <h2>Online Notepad (GitHub Gist)</h2>
+    <textarea id="notepad" placeholder="Loading comments..."></textarea>
+    <button onclick="postComment()">Post Comment</button>
     
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const notepad = document.getElementById("notepad");
-            const savedText = localStorage.getItem("notepadContent") || "";
-            notepad.value = savedText;
+        const GIST_ID = "f623a620d14796f04df65187df5111e9"; // Replace with your actual Gist ID
+        const GIST_FILE = "twt-ehp6";
+        const GITHUB_API = `https://api.github.com/gists/${GIST_ID}`;
+        
+        async function loadComments() {
+            try {
+                let response = await fetch(GITHUB_API);
+                let data = await response.json();
+                let comments = data.files[GIST_FILE]?.content || "";
+                document.getElementById("notepad").value = comments;
+            } catch (error) {
+                console.error("Failed to load comments", error);
+            }
+        }
+        
+        async function postComment() {
+            let commentBox = document.getElementById("notepad");
+            let newComment = `\n${new Date().toLocaleString()} - ${commentBox.value.trim()}`;
             
-            notepad.addEventListener("keydown", function (event) {
-                if (event.key === "Enter") {
-                    event.preventDefault();
-                    const now = new Date().toLocaleString();
-                    notepad.value += "\n" + now + " - ";
+            try {
+                let response = await fetch(GITHUB_API, {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "token YOUR_GITHUB_TOKEN" // Replace with your GitHub token if needed
+                    },
+                    body: JSON.stringify({
+                        files: { [GIST_FILE]: { content: newComment } }
+                    })
+                });
+                if (response.ok) {
+                    loadComments();
+                    commentBox.value = "";
+                } else {
+                    alert("Failed to save comment. GitHub may require authentication.");
                 }
-            });
-            
-            notepad.addEventListener("input", function () {
-                localStorage.setItem("notepadContent", notepad.value);
-            });
-        });
+            } catch (error) {
+                console.error("Failed to post comment", error);
+            }
+        }
+        
+        loadComments(); // Load comments on page load
     </script>
 </body>
 </html>
